@@ -1,0 +1,23 @@
+#!/bin/bash
+LOC=/var/lib/named
+CFG=unibit.co.id.db
+LCK=/tmp/ddns
+echo "Content-type: text/html"
+echo ""
+echo "<html><head><title>DDNS update"
+echo "</title></head><body>"
+#echo "<h1>General system information for host $(hostname -s)</h1>"
+echo "$QUERY_STRING $REMOTE_ADDR"
+echo "$QUERY_STRING $REMOTE_ADDR #`date`" >> /var/log/ddns.ip
+CUR_IP=`grep $QUERY_STRING /var/lib/named/unibit.co.id.db | gawk '{print $4}'`
+if [ $CUR_IP != $REMOTE_ADDR ]; then
+    DST=`mktemp`
+    SN=`date +%Y%m%d%H`
+    sed $LOC/$CFG -e "s/\($QUERY_STRING IN A\) \(.*\)/\1 $REMOTE_ADDR/g" > $DST
+    sed $DST -i -e "s/.*Serial.*/\t\t$SN\t; Serial/g"
+    cp $LOC/$CFG /tmp/$CFG.orig -f
+    cat $DST > $LOC/$CFG
+    touch /tmp/ddns
+fi
+echo "</body>"
+echo "</html>"
